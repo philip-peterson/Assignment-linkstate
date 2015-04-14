@@ -16,7 +16,9 @@
 #define TOK_N        -3
 #define TOK_EOF      -4
 #define TOK_ERROR    -5
-#define TOK_UNEXPECT -5
+#define TOK_UNEXPECT -6
+
+int *edges;
 
 int getTok(FILE * stream) {
    int num;
@@ -24,18 +26,15 @@ int getTok(FILE * stream) {
       return num;
    }
 
-   fscanf(stream, ",%n", &num);
-   if ( num == 1 ) {
+   if ( fscanf(stream, ",%n", &num) == 0 && num == 1 ) {
       return TOK_COMMA;
    }
 
-   fscanf(stream, ".%n", &num);
-   if ( num == 1 ) {
+   if ( fscanf(stream, ".%n", &num) == 0 && num == 1 ) {
       return TOK_NEWLINE;
    }
 
-   fscanf(stream, "N%n", &num);
-   if ( num == 1 ) {
+   if ( fscanf(stream, "N%n", &num) == 0 && num == 1 ) {
       return TOK_N;
    }
 
@@ -46,6 +45,8 @@ int getTok(FILE * stream) {
    if (ferror(stream)) {
       return TOK_ERROR;
    }
+
+
 
    return TOK_UNEXPECT;
 
@@ -63,6 +64,7 @@ int initializeBuffers(const char *fp) {
    };
 
    struct node *tail = NULL;
+   struct node *head = NULL;
 
    int N = 0;
    int count = 0;
@@ -86,17 +88,18 @@ int initializeBuffers(const char *fp) {
          }
 
          if (tail == NULL) {
+            head = newtail;
             tail = newtail;
          }
          else {
             tail->next = newtail;
+            tail = newtail;
          }
       }
       else if (token == TOK_COMMA) {
          continue;
       }
       else if (token == TOK_NEWLINE) {
-         // printf("Newline!\n"); // uncommenting this line makes the program terminate...
 
          if (row == 0) {
             N = count;
@@ -117,6 +120,10 @@ int initializeBuffers(const char *fp) {
          continue;
       }
       else if (token == TOK_EOF) {
+         if (row != N) {
+            fprintf(stderr, "Error: inconsistent element count (expected %d rows, got %d).\n", N, row);
+            exit(ERR_INCON);
+         }
          break;
       }
       else {
@@ -124,6 +131,39 @@ int initializeBuffers(const char *fp) {
          exit(ERR_INVAL);
       }
    }
+
+   // copy data from LL to buffer
+   int i;
+   int j;
+   struct node *cur = head;
+   edges = malloc(sizeof(*edges)*(N*N));
+   for (i = 0; i < N; i++) {
+      for (j = 0; j < N; j++) {
+         edges[i*N+j] = cur->val;
+         cur = cur->next;
+      }
+   }
+
+   {
+   
+      // now free linked list
+      struct node *cur = head;
+      while (cur != NULL) {
+         struct node *next = cur->next;
+         free(cur);
+         cur = next;
+      }
+
+   }
+
+   for (i = 0; i < N; i++) {
+      for (j = 0; j < N; j++) {
+         printf("%d ", edges[i*N+j]);
+      }
+      printf("\n");
+   }
+   printf("\n");
+
 
    if (fclose(stream) != 0) {
       return 0;
