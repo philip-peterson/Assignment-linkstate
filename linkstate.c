@@ -3,6 +3,9 @@
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
+#include <ctype.h>
+
+#include "linkstate.h"
 
 #define ERR_USAGE 1
 #define ERR_IO    2
@@ -18,38 +21,68 @@
 #define TOK_ERROR    -5
 #define TOK_UNEXPECT -6
 
+#define CHECKERROR() \
+   if (ferror(stream)) { \
+      return TOK_ERROR; \
+   }
+
 int *edges;
 
+/*
+ * Returns either a token type or a number. Token types are values
+ * corresponding to TOK_* macros. If the return values is less than zero,
+ * it's a token type. Otherwise it's a number. Numbers represent data
+ * read from the file.
+ * 
+ * When the stream has been exhausted, this function will return TOK_EOF's forever.
+ * If a TOK_ERROR or TOK_UNEXPECT is returned by this function at any point for 
+ * a given stream, the results of subsequent calls to this function with the same
+ * stream are undefined.
+ */
 int getTok(FILE * stream) {
-   int num;
-   if ( fscanf(stream, "%d", &num) == 1 ) {
-      return num;
-   }
-
-   if ( fscanf(stream, ",%n", &num) == 0 && num == 1 ) {
-      return TOK_COMMA;
-   }
-
-   if ( fscanf(stream, ".%n", &num) == 0 && num == 1 ) {
-      return TOK_NEWLINE;
-   }
-
-   if ( fscanf(stream, "N%n", &num) == 0 && num == 1 ) {
-      return TOK_N;
-   }
-
    if (feof(stream)) {
       return TOK_EOF;
    }
 
-   if (ferror(stream)) {
-      return TOK_ERROR;
+   int num;
+
+   int c;
+   do {
+      c = fgetc(stream);
+      CHECKERROR();
+      if (feof(stream)) {
+         return TOK_EOF;
+      }
+   } while (isspace(c));
+
+   if ( c == ',' ) {
+      return TOK_COMMA;
+   }
+   else if ( c == '.' ) {
+      return TOK_NEWLINE;
+   }
+   else if ( c == 'N' ) {
+      return TOK_N;
+   }
+   else if ( c == 'E' ) {
+      if (fscanf(stream, "OF.%n", &num) == 0 && num == 3) {
+         return TOK_EOF;
+      }
+      else {
+         return TOK_UNEXPECT;
+      }
+   }
+   else {
+      ungetc(c, stream);
+      CHECKERROR();
+      if ('0' <= c && c <= '9') {
+         fscanf(stream, "%d", &num);
+         CHECKERROR();
+         return num;
+      }
    }
 
-
-
    return TOK_UNEXPECT;
-
 }
 
 int initializeBuffers(const char *fp) {
@@ -73,7 +106,7 @@ int initializeBuffers(const char *fp) {
    while (1) {
       int token = getTok(stream);
       if (token >= 0 || token == TOK_N) {
-         struct node *newtail = malloc(sizeof(*tail));
+         struct node *newtail = (struct node*)malloc(sizeof(*tail));
          if (newtail == NULL) {
             fprintf(stderr, "Error: out of memory.\n");
             exit(ERR_OOM);
@@ -136,7 +169,7 @@ int initializeBuffers(const char *fp) {
    int i;
    int j;
    struct node *cur = head;
-   edges = malloc(sizeof(*edges)*(N*N));
+   edges = (int*)malloc(sizeof(*edges)*(N*N));
    for (i = 0; i < N; i++) {
       for (j = 0; j < N; j++) {
          edges[i*N+j] = cur->val;
@@ -156,14 +189,7 @@ int initializeBuffers(const char *fp) {
 
    }
 
-   for (i = 0; i < N; i++) {
-      for (j = 0; j < N; j++) {
-         printf("%d ", edges[i*N+j]);
-      }
-      printf("\n");
-   }
-   printf("\n");
-
+   dijkstra(edges, N);
 
    if (fclose(stream) != 0) {
       return 0;
@@ -187,4 +213,8 @@ int main(int argc, char **argv) {
    }
 
    return 0;
+}
+
+void dijkstra(int* edges, int N) {
+  
 }
