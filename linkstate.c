@@ -215,6 +215,78 @@ int main(int argc, char **argv) {
    return 0;
 }
 
-void dijkstra(int* edges, int N) {
-  
+void dijkstra(int* edges, int n) {
+   int visited[n];
+   int predecessors[n];
+   int distance[n];
+
+   for (int i = 0; i < n; i++) {
+      visited[i] = 0;
+      predecessors[i] = -1;
+      distance[i] = INT_MAX;
+   }
+
+   int currentlyVisiting = 1;
+   int step = -1;
+
+   while (1) {
+      step++;
+
+      int indexOfMinimum = -1;
+      int minimum = INT_MAX;
+
+      // Relax, while noting the minimum tentative distance of nodes that are unvisited.
+      // We visit backwards (n-1 to 0) because we want to prefer the node with a smaller
+      // index number, per the directions.
+      for (int i = n-1; i >= 0; i--) {
+         int weight = edges[currentlyVisiting*n + i];
+         int contenderDistance = distance[i]+weight;
+         if (distance[i] > contenderDistance) {
+            distance[i] = contenderDistance;
+            predecessors[i] = currentlyVisiting;
+         }
+
+         // Keep track of minimum-tentative-distance unvisited node
+         if (distance[i] < minimum && !visited[i]) {
+            minimum = distance[i];
+            indexOfMinimum = i;
+         }
+      }
+
+      visited[currentlyVisiting] = 1;
+      printVisited(n, visited);
+
+      if (indexOfMinimum == -1) {
+         // No adjacent node to <currentlyVisiting> is unvisited, so check to see
+         // if there are any non-adjacent nodes that haven't been visited.
+         
+         bool foundUnvisited = false;
+         for (int j = 0; j < n; j++) {
+            if (!visited[j]) {
+               foundUnvisited = true;
+               currentlyVisiting = j;
+               break;
+            }
+         }
+
+         if (!foundUnvisited) {
+            // If we've reached here, there are no unvisited nodes. We're done!
+            break;
+         }
+      }
+      else {
+         currentlyVisiting = indexOfMinimum;
+      }
+   }
+}
+
+void printVisited(int n, int* visited) {
+   bool first = true;
+   for (int i = 0; i < n; i++) {
+      if (!first) {
+         printf(",");
+      }
+      printf("%d", (i+1));
+      first = false;
+   }
 }
