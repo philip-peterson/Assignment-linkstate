@@ -6,4 +6,8 @@ int getTok(FILE * stream);
 
 void dijkstra(int* edges, int N);
 
-void printVisited(int n, int* visited);
+void printStep(int step, int n, int *visited, int *distance, int *predecessors);
+
+void printDashes();
+
+void printTableHeaders(int n);

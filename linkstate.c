@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <ctype.h>
+#include <math.h>
 
 #include "linkstate.h"
 
@@ -114,7 +115,7 @@ int initializeBuffers(const char *fp) {
          count++;
          newtail->next = NULL;
          if (token == TOK_N) {
-            newtail->val = INT_MAX;
+            newtail->val = -1;
          }
          else {
             newtail->val = token;
@@ -197,6 +198,45 @@ int initializeBuffers(const char *fp) {
    return 1;
 }
 
+int ceil_log10(int x, int& power) {
+   int log = 1;
+   power = 1;
+   while (x > power) {
+      log++;
+      power *= 10;
+   }
+   return log;
+}
+
+int getNumSpacesToPrintNumbersFromOneToNJoinedByCommas(int n) {
+   if (n == 1) {
+      return 1;
+   }
+   if (n < 1) {
+      return 0;
+   }
+
+   int numSpaces = 0;
+
+   int power;
+   int currentDigits = ceil_log10(n, power);
+   power /= 10;
+   currentDigits--;
+
+   while (power != 1) {
+      numSpaces += (n - power + 1)*currentDigits; // each number
+      numSpaces += currentDigits; // for the commas
+      n = power;
+      power /= 10;
+      currentDigits--;
+   }
+
+   numSpaces += (n-1)*2; // 1 digit numbers (greater than zero) followed by commas
+   numSpaces--; // no need for a final trailing comma
+
+   return numSpaces;
+}
+
 int main(int argc, char **argv) {
 	if (argc != 2) {
       fprintf(stderr, "Usage: linkstate FILE\n");
@@ -216,6 +256,8 @@ int main(int argc, char **argv) {
 }
 
 void dijkstra(int* edges, int n) {
+   printTableHeaders(n);
+
    int visited[n];
    int predecessors[n];
    int distance[n];
@@ -226,7 +268,9 @@ void dijkstra(int* edges, int n) {
       distance[i] = INT_MAX;
    }
 
-   int currentlyVisiting = 1;
+   distance[0] = 0;
+
+   int currentlyVisiting = 0;
    int step = -1;
 
    while (1) {
@@ -239,8 +283,19 @@ void dijkstra(int* edges, int n) {
       // We visit backwards (n-1 to 0) because we want to prefer the node with a smaller
       // index number, per the directions.
       for (int i = n-1; i >= 0; i--) {
+         if (i == currentlyVisiting) {
+            continue;
+         }
+
          int weight = edges[currentlyVisiting*n + i];
-         int contenderDistance = distance[i]+weight;
+         
+         if (weight == -1) {
+            // Check to make sure the node is connected to the current node
+            continue;
+         }
+
+         int myDist = distance[currentlyVisiting];
+         int contenderDistance = myDist+weight;
          if (distance[i] > contenderDistance) {
             distance[i] = contenderDistance;
             predecessors[i] = currentlyVisiting;
@@ -254,7 +309,7 @@ void dijkstra(int* edges, int n) {
       }
 
       visited[currentlyVisiting] = 1;
-      printVisited(n, visited);
+      printStep(step, n, visited, distance, predecessors);
 
       if (indexOfMinimum == -1) {
          // No adjacent node to <currentlyVisiting> is unvisited, so check to see
@@ -280,13 +335,45 @@ void dijkstra(int* edges, int n) {
    }
 }
 
-void printVisited(int n, int* visited) {
+void printStep(int step, int n, int *visited, int *distance, int *predecessors) {
+   printf("%d\t", step);
+
    bool first = true;
    for (int i = 0; i < n; i++) {
+      if (!visited[i]) {
+         continue;
+      }
       if (!first) {
          printf(",");
       }
       printf("%d", (i+1));
       first = false;
    }
+
+   for (int i = 1; i < n; i++) {
+      printf("\t");
+      if (predecessors[i] == -1) {
+         continue;
+      }
+      printf("%d,%d", distance[i], predecessors[i]+1);
+   }
+
+
+   printDashes();
+}
+
+void printDashes() {
+   printf("\n---------------------------------------------------------------------------------\n");
+}
+
+void printTableHeaders(int n) {
+   printDashes();
+   printf(
+      "Step"   "\t"
+      "N'"     "\t"
+   );
+   for (int i = 1; i < n; i++) {
+      printf("D(%d),p(%d)\t", i+1, i+1);
+   }
+   printDashes();
 }
