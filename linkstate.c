@@ -302,7 +302,7 @@ void dijkstra(int* edges, int n) {
          }
 
          // Keep track of minimum-tentative-distance unvisited node
-         if (distance[i] < minimum && !visited[i]) {
+         if (distance[i] <= minimum && !visited[i]) {
             minimum = distance[i];
             indexOfMinimum = i;
          }
