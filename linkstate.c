@@ -208,35 +208,6 @@ int ceil_log10(int x, int& power) {
    return log;
 }
 
-int getNumSpacesToPrintNumbersFromOneToNJoinedByCommas(int n) {
-   if (n == 1) {
-      return 1;
-   }
-   if (n < 1) {
-      return 0;
-   }
-
-   int numSpaces = 0;
-
-   int power;
-   int currentDigits = ceil_log10(n, power);
-   power /= 10;
-   currentDigits--;
-
-   while (power != 1) {
-      numSpaces += (n - power + 1)*currentDigits; // each number
-      numSpaces += currentDigits; // for the commas
-      n = power;
-      power /= 10;
-      currentDigits--;
-   }
-
-   numSpaces += (n-1)*2; // 1 digit numbers (greater than zero) followed by commas
-   numSpaces--; // no need for a final trailing comma
-
-   return numSpaces;
-}
-
 int main(int argc, char **argv) {
 	if (argc != 2) {
       fprintf(stderr, "Usage: linkstate FILE\n");
